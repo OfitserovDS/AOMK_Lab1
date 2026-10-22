@@ -94,14 +94,18 @@ CONFIG_DIR = $(if $(filter 1,$(DEBUG)),Debug,Release)
 OUT_DIR = ..$(SLASH)..$(SLASH)..$(SLASH)BuildFiles$(SLASH)$(PLATFORM)$(SLASH)$(ARCH_TARGET)$(SLASH)$(BASE_TARGET)$(CONFIG_DIR)
 
 # --- Compilation Flags ---
-# Includes
+# Includes (DependenciesFiles: интерфейсы и идентификаторы компонентов-калькуляторов курса)
 INC = -I "$(ECO_FRAMEWORK)$(SLASH)Eco.Core1$(SLASH)SharedFiles" \
 -I "$(ECO_FRAMEWORK)$(SLASH)Eco.InterfaceBus1$(SLASH)SharedFiles" \
 -I "$(ECO_FRAMEWORK)$(SLASH)Eco.MemoryManager1$(SLASH)SharedFiles" \
 -I "$(ECO_FRAMEWORK)$(SLASH)Eco.FileSystemManagement1$(SLASH)SharedFiles" \
 -I "$(ECO_FRAMEWORK)$(SLASH)Eco.System1$(SLASH)SharedFiles" \
 -I ..$(SLASH)..$(SLASH)..$(SLASH)HeaderFiles \
--I ..$(SLASH)..$(SLASH)..$(SLASH)SharedFiles
+-I ..$(SLASH)..$(SLASH)..$(SLASH)SharedFiles \
+-I ..$(SLASH)..$(SLASH)..$(SLASH)DependenciesFiles$(SLASH)Eco.CalculatorA$(SLASH)SharedFiles \
+-I ..$(SLASH)..$(SLASH)..$(SLASH)DependenciesFiles$(SLASH)Eco.CalculatorB$(SLASH)SharedFiles \
+-I ..$(SLASH)..$(SLASH)..$(SLASH)DependenciesFiles$(SLASH)Eco.CalculatorD$(SLASH)SharedFiles \
+-I ..$(SLASH)..$(SLASH)..$(SLASH)DependenciesFiles$(SLASH)Eco.CalculatorE$(SLASH)SharedFiles
 
 # Global Compiler Flags (-DECO_LINUX )
 # -fno-stack-protector: gcc в Ubuntu по умолчанию включает защиту стека, которая

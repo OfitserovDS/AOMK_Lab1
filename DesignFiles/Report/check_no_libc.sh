@@ -22,6 +22,7 @@ FW="${ECO_FRAMEWORK:?ECO_FRAMEWORK is not set}"
     if command -v arm-none-eabi-gcc >/dev/null 2>&1; then
         TMPD=$(mktemp -d)
         INC="-I $FW/Eco.Core1/SharedFiles -I $FW/Eco.InterfaceBus1/SharedFiles -I $FW/Eco.MemoryManager1/SharedFiles -I $FW/Eco.FileSystemManagement1/SharedFiles -I $FW/Eco.System1/SharedFiles -I $ROOT/HeaderFiles -I $ROOT/SharedFiles"
+        for c in A B D E; do INC="$INC -I $ROOT/DependenciesFiles/Eco.Calculator$c/SharedFiles"; done
         for f in "$ROOT"/SourceFiles/*.c; do
             arm-none-eabi-gcc -std=gnu89 -Wall -fms-extensions -ffreestanding -O2 -mcpu=cortex-m4 -mthumb -mfloat-abi=hard -mfpu=fpv4-sp-d16 \
                 -DECO_LIB -DUGUID_UTILITY -DECO_OS -DECO_AARCH32 $INC -c "$f" -o "$TMPD/$(basename "$f" .c).o"

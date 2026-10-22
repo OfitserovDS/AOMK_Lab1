@@ -139,7 +139,8 @@ static int16_t ECOCALLMETHOD CEcoAdvancedMath_4CAA1B2FFactory_Init(/* in */ stru
  *   The function creates a component.
  *   Все интерфейсы, полученные фабрикой (система, шина, распределитель памяти),
  *   освобождаются перед возвратом; экземпляр компонента получает собственные
- *   ссылки в своей функции Init. Агрегирование компонентом не поддерживается.
+ *   ссылки в своей функции Init. Компонент поддерживает агрегирование: внешний
+ *   компонент запрашивает IEcoUnknown и получает неделегирующий IEcoUnknown экземпляра.
  * </description>
  *
  */
@@ -158,8 +159,8 @@ static int16_t ECOCALLMETHOD CEcoAdvancedMath_4CAA1B2FFactory_Alloc(/* in */ str
     }
     *ppv = 0;
 
-    /* Aggregation is not supported */
-    if ( pIUnknownOuter != 0 ) {
+    /* Aggregation: the outer component may request only IEcoUnknown */
+    if ( pIUnknownOuter != 0 && !IsEqualUGUID(riid, &IID_IEcoUnknown) ) {
         return ERR_ECO_NOAGGREGATION;
     }
 
@@ -222,8 +223,8 @@ static int16_t ECOCALLMETHOD CEcoAdvancedMath_4CAA1B2FFactory_Alloc(/* in */ str
         goto Release;
     }
 
-    /* Getting a pointer to the interface */
-    pIUnk = (IEcoUnknown*)pCObj;
+    /* Getting a pointer to the interface (through the nondelegating IEcoUnknown) */
+    pIUnk = (IEcoUnknown*)&pCObj->m_pVTblINondelegatingUnk;
     result = pIUnk->pVTbl->QueryInterface(pIUnk, riid, ppv);
 
     /* Decrementing the reference requested by the Component Factory

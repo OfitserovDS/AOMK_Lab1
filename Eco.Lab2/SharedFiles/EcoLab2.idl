@@ -1,0 +1,49 @@
+﻿/*
+ * <character encoding>
+ *   Cyrillic (UTF-8 with signature) - Codepage 65001
+ * </character encoding>
+ *
+ * <summary>
+ *   EcoLab2 IDL
+ * </summary>
+ *
+ * <description>
+ *   Контракт компонента Eco.Lab2 (лабораторная работа 2).
+ *
+ *   Компонент предоставляет интерфейсы:
+ *     IEcoLab2         - собственный интерфейс (ниже);
+ *     IEcoAdvancedMath - агрегирование компонента Eco.AdvancedMath (лабораторная работа 1);
+ *     IEcoCalculatorX  - включение компонента E (внутри E агрегирован компонент B);
+ *     IEcoCalculatorY  - включение компонента E.
+ *   Если компонент E недоступен, IEcoCalculatorX и IEcoCalculatorY предоставляет
+ *   агрегированный Eco.AdvancedMath (агрегирование B, включение A/C, D, E).
+ * </description>
+ *
+ * <author>
+ *   Copyright (c) 2026 Офицеров Д.С. All rights reserved.
+ * </author>
+ *
+ */
+
+import "IEcoBase1.idl";
+
+/* Операции метода IEcoLab2::Calculate */
+typedef [public] enum ECO_LAB2_OPERATION {
+    ECO_LAB2_OP_ADDITION       = 0,
+    ECO_LAB2_OP_SUBTRACTION    = 1,
+    ECO_LAB2_OP_MULTIPLICATION = 2,
+    ECO_LAB2_OP_DIVISION       = 3
+} ECO_LAB2_OPERATION;
+
+[
+    object,
+    uuid(2D766564-6D5B-49FF-9E29-65E281F70DAF),
+    pointer_default(unique)
+]
+interface IEcoLab2 : IEcoUnknown {
+
+    int16_t Calculate([in] uint16_t op, [in] int16_t a, [in] int16_t b, [out] int32_t* pResult);
+
+    int16_t SplineMean([in, size_is(n)] const double_t* x, [in, size_is(n)] const double_t* y, [in] uint32_t n,
+                       [in] double_t a, [in] double_t b, [out] double_t* pMean);
+};
