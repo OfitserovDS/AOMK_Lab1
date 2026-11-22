@@ -30,6 +30,10 @@
 #include "IdEcoMemoryManager1.h"
 #include "IEcoCalculatorX.h"
 #include "IEcoCalculatorY.h"
+#include "IEcoConnectionPoint.h"
+#include "CEcoSplineConnectionPoint.h"
+
+struct CEcoSplineSubscription;
 
 typedef struct CEcoAdvancedMath_4CAA1B2F* CEcoAdvancedMath_4CAA1B2FPtr_t;
 
@@ -70,6 +74,10 @@ typedef struct CEcoAdvancedMath_4CAA1B2F {
     IEcoUnknown* m_pIUnkInnerX;     /* B - агрегирование: IEcoCalculatorX передается клиенту напрямую */
     IEcoCalculatorX* m_pIX;         /* A или его вторая версия C - включение, если B недоступен */
     IEcoCalculatorY* m_pIY;         /* D, E или C - включение */
+
+    /* Точка подключения событий сплайна принадлежит экземпляру. */
+    IEcoConnectionPointContainer m_ConnectionContainer;
+    CEcoSplineConnectionPoint m_ConnectionPoint;
 
 } CEcoAdvancedMath_4CAA1B2F;
 

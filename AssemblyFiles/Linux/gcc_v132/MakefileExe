@@ -146,7 +146,8 @@ ifneq ($(TARGET), 1)
 endif
 
 # --- Source and Object Files ---
-SRC_C = ..$(SLASH)..$(SLASH)..$(SLASH)UnitTestFiles$(SLASH)SourceFiles$(SLASH)EcoAdvancedMath.c
+SRC_C = ..$(SLASH)..$(SLASH)..$(SLASH)UnitTestFiles$(SLASH)SourceFiles$(SLASH)EcoAdvancedMath.c \
+        ..$(SLASH)..$(SLASH)..$(SLASH)UnitTestFiles$(SLASH)SourceFiles$(SLASH)EcoAdvancedMathEvents.c
 SRC_S = 
 
 OBJ = $(SRC_C:.c=.o)

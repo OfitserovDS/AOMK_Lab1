@@ -1289,6 +1289,8 @@ static void ExportPlotData(IEcoAdvancedMath* pIMath) {
  * </description>
  *
  */
+void TestSplineEvents(IEcoInterfaceBus1* pBus, IEcoAdvancedMath* pFirst, void (*Check)(int, const char_t*));
+
 int16_t EcoMain(IEcoUnknown* pIUnk) {
     int16_t result = -1;
     /* Pointer to the system interface */
@@ -1354,6 +1356,7 @@ int16_t EcoMain(IEcoUnknown* pIUnk) {
     TestThomasVsGauss(pIEcoAdvancedMath, pIMem);
     TestPerformance(pIEcoAdvancedMath, pIMem);
     ExportPlotData(pIEcoAdvancedMath);
+    TestSplineEvents(pIBus, pIEcoAdvancedMath, Check);
 
     PrintSection("Итог");
     printf("Проверок: %lu, успешно: %lu, с ошибками: %lu\n", (unsigned long)g_nChecks, (unsigned long)(g_nChecks - g_nFailed), (unsigned long)g_nFailed);

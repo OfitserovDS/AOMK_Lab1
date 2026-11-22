@@ -363,11 +363,13 @@ static IEcoSplineVTbl g_xB0ED03B2183147478635F0C9191A7C2BVTbl_4CAA1B2F = {
  * </description>
  *
  */
-int16_t createCEcoSpline_4CAA1B2F(/* in */ IEcoMemoryAllocator1* pIMem, /* in */ const double_t* x, /* in */ const double_t* y, /* in */ uint32_t n, /* in */ const ECO_SPLINE_ENDS_T* pEnds, /* out */ IEcoSpline** ppISpline) {
+int16_t createCEcoSpline_4CAA1B2F(/* in */ IEcoMemoryAllocator1* pIMem, /* in */ const double_t* x, /* in */ const double_t* y, /* in */ uint32_t n, /* in */ const ECO_SPLINE_ENDS_T* pEnds, /* out */ IEcoSpline** ppISpline, /* in */ CEcoSplineEventSource* pSource) {
     CEcoSpline_4CAA1B2F* pCObj = 0;
     double_t* pWork = 0;
     uint32_t headerSize = 0;
     uint32_t k = 0;
+    CEcoSplineTrace trace;
+    CEcoSplineTrace* pTrace = 0;
     int16_t result = ERR_ECO_SUCCESS;
 
     /* Pointer Validation */
@@ -397,15 +399,25 @@ int16_t createCEcoSpline_4CAA1B2F(/* in */ IEcoMemoryAllocator1* pIMem, /* in */
         return ERR_ECO_OUTOFMEMORY;
     }
 
+    result = EcoSplineBeginTrace(pSource, &trace);
+    if (result != ERR_ECO_SUCCESS) {
+        return result;
+    }
+    if (trace.pEnum != 0) {
+        pTrace = &trace;
+    }
+
     /* Блок объекта: структура (headerSize байт) + узлы n + коэффициенты 4(n-1) + первообразная n */
     pCObj = (CEcoSpline_4CAA1B2F*)pIMem->pVTbl->Alloc(pIMem, (uint32_t)(headerSize + (6UL * n - 4) * sizeof(double_t)));
     if (pCObj == 0) {
+        EcoSplineEndTrace(&trace);
         return ERR_ECO_OUTOFMEMORY;
     }
     /* Рабочий массив: наклоны s[n] + диагонали прогонки 3n */
     pWork = (double_t*)pIMem->pVTbl->Alloc(pIMem, (uint32_t)(4UL * n * sizeof(double_t)));
     if (pWork == 0) {
         pIMem->pVTbl->Free(pIMem, pCObj);
+        EcoSplineEndTrace(&trace);
         return ERR_ECO_OUTOFMEMORY;
     }
 
@@ -419,11 +431,11 @@ int16_t createCEcoSpline_4CAA1B2F(/* in */ IEcoMemoryAllocator1* pIMem, /* in */
     pCObj->m_pIntegrals = pCObj->m_pCoefs + 4 * (n - 1);
 
     /* Наклоны (метод прогонки) и коэффициенты кусков */
-    result = EcoSplineSolveSlopes_d(x, y, n, pEnds, pWork, pWork + n);
+    result = EcoSplineSolveSlopes_d(x, y, n, pEnds, pWork, pWork + n, pTrace);
     if (result == ERR_ECO_SUCCESS) {
         /* Copy принимает неконстантный указатель на источник (API IEcoMemoryAllocator1), данные не изменяются */
         pIMem->pVTbl->Copy(pIMem, pCObj->m_pBreaks, (voidptr_t)x, n * (uint32_t)sizeof(double_t));
-        EcoSplineBuildCoefs_d(x, y, pWork, n, pCObj->m_pCoefs);
+        EcoSplineBuildCoefs_d(x, y, pWork, n, pCObj->m_pCoefs, pTrace);
 
         /* Значения первообразной в узлах: F[0] = 0, F[k+1] = F[k] + интеграл k-го куска */
         pCObj->m_pIntegrals[0] = 0;
@@ -435,11 +447,13 @@ int16_t createCEcoSpline_4CAA1B2F(/* in */ IEcoMemoryAllocator1* pIMem, /* in */
 
     if (result != ERR_ECO_SUCCESS) {
         pIMem->pVTbl->Free(pIMem, pCObj);
+        EcoSplineEndTrace(&trace);
         return result;
     }
 
     /* Объект хранит собственную ссылку на распределитель памяти */
     pIMem->pVTbl->AddRef(pIMem);
     *ppISpline = (IEcoSpline*)pCObj;
+    EcoSplineEndTrace(&trace);
     return ERR_ECO_SUCCESS;
 }

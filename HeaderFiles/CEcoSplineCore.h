@@ -63,6 +63,7 @@
 
 #include "IEcoAdvancedMath.h"
 #include "ErrEcoAdvancedMath.h"
+#include "CEcoSplineEvents.h"
 
 /*
  * <summary>
@@ -187,7 +188,7 @@ static int16_t ECO_SPLINE_FN(EcoSplineCheckData)(/* in */ const ECO_SPLINE_REAL*
  *   Возвращает ERR_ECOADVANCEDMATH_SINGULAR, если знаменатель обратился в 0.
  * </description>
  */
-static int16_t ECO_SPLINE_FN(EcoSplineThomas)(/* in */ const ECO_SPLINE_REAL* a, /* in */ const ECO_SPLINE_REAL* b, /* in, out */ ECO_SPLINE_REAL* c, /* in, out */ ECO_SPLINE_REAL* s, /* in */ uint32_t n) {
+static int16_t ECO_SPLINE_FN(EcoSplineThomas)(/* in */ const ECO_SPLINE_REAL* a, /* in */ const ECO_SPLINE_REAL* b, /* in, out */ ECO_SPLINE_REAL* c, /* in, out */ ECO_SPLINE_REAL* s, /* in */ uint32_t n, /* in */ CEcoSplineTrace* pTrace) {
     ECO_SPLINE_REAL denom = 0;
     uint32_t i = 0;
 
@@ -198,6 +199,9 @@ static int16_t ECO_SPLINE_FN(EcoSplineThomas)(/* in */ const ECO_SPLINE_REAL* a,
     }
     c[0] = -c[0] / denom;
     s[0] = s[0] / denom;
+    if (pTrace != 0) {
+        EcoSplineNotifyForward(pTrace, 0, c[0], s[0]);
+    }
     for (i = 1; i < n; i++) {
         denom = b[i] + a[i] * c[i - 1];
         if (denom == 0) {
@@ -205,11 +209,20 @@ static int16_t ECO_SPLINE_FN(EcoSplineThomas)(/* in */ const ECO_SPLINE_REAL* a,
         }
         c[i] = -c[i] / denom;
         s[i] = (s[i] - a[i] * s[i - 1]) / denom;
+        if (pTrace != 0) {
+            EcoSplineNotifyForward(pTrace, i, c[i], s[i]);
+        }
     }
 
     /* Обратный ход прогонки: s[n-1] = beta[n-1] уже на месте */
+    if (pTrace != 0) {
+        EcoSplineNotifySlope(pTrace, n - 1, s[n - 1]);
+    }
     for (i = n - 1; i > 0; i--) {
         s[i - 1] = c[i - 1] * s[i] + s[i - 1];
+        if (pTrace != 0) {
+            EcoSplineNotifySlope(pTrace, i - 1, s[i - 1]);
+        }
     }
     return ERR_ECO_SUCCESS;
 }
@@ -235,7 +248,7 @@ static int16_t ECO_SPLINE_FN(EcoSplineThomas)(/* in */ const ECO_SPLINE_REAL* a,
  *   на этом конце берется наклон хорды (как в SciPy CubicSpline).
  * </description>
  */
-static int16_t ECO_SPLINE_FN(EcoSplineSolveSlopes)(/* in */ const ECO_SPLINE_REAL* x, /* in */ const ECO_SPLINE_REAL* y, /* in */ uint32_t n, /* in */ const ECO_SPLINE_ENDS_T* pEnds, /* out */ ECO_SPLINE_REAL* s, /* in */ ECO_SPLINE_REAL* pWork) {
+static int16_t ECO_SPLINE_FN(EcoSplineSolveSlopes)(/* in */ const ECO_SPLINE_REAL* x, /* in */ const ECO_SPLINE_REAL* y, /* in */ uint32_t n, /* in */ const ECO_SPLINE_ENDS_T* pEnds, /* out */ ECO_SPLINE_REAL* s, /* in */ ECO_SPLINE_REAL* pWork, /* in */ CEcoSplineTrace* pTrace) {
     ECO_SPLINE_REAL* a = pWork;           /* поддиагональ:     a[i] при s[i-1] */
     ECO_SPLINE_REAL* b = pWork + n;       /* главная диагональ: b[i] при s[i]  */
     ECO_SPLINE_REAL* c = pWork + 2 * n;   /* наддиагональ:     c[i] при s[i+1] */
@@ -271,6 +284,11 @@ static int16_t ECO_SPLINE_FN(EcoSplineSolveSlopes)(/* in */ const ECO_SPLINE_REA
             s[0] = dPrev - c2 * hPrev;
             s[1] = dPrev + c2 * hPrev;
             s[2] = dPrev + c2 * (hPrev + 2 * hNext);
+        }
+        if (pTrace != 0) {
+            for (i = n; i > 0; --i) {
+                EcoSplineNotifySlope(pTrace, i - 1, s[i - 1]);
+            }
         }
         return ERR_ECO_SUCCESS;
     }
@@ -368,7 +386,12 @@ static int16_t ECO_SPLINE_FN(EcoSplineSolveSlopes)(/* in */ const ECO_SPLINE_REA
     }
 
     /* Решение СЛАУ методом прогонки */
-    return ECO_SPLINE_FN(EcoSplineThomas)(a, b, c, s, n);
+    if (pTrace != 0) {
+        for (i = 0; i < n; ++i) {
+            EcoSplineNotifyRow(pTrace, i, a[i], b[i], c[i], s[i]);
+        }
+    }
+    return ECO_SPLINE_FN(EcoSplineThomas)(a, b, c, s, n, pTrace);
 }
 
 /*
@@ -386,7 +409,7 @@ static int16_t ECO_SPLINE_FN(EcoSplineSolveSlopes)(/* in */ const ECO_SPLINE_REA
  *   Результат: coefs[4*k + 0..3] = {a, b, c, d}.
  * </description>
  */
-static void ECO_SPLINE_FN(EcoSplineBuildCoefs)(/* in */ const ECO_SPLINE_REAL* x, /* in */ const ECO_SPLINE_REAL* y, /* in */ const ECO_SPLINE_REAL* s, /* in */ uint32_t n, /* out */ ECO_SPLINE_REAL* coefs) {
+static void ECO_SPLINE_FN(EcoSplineBuildCoefs)(/* in */ const ECO_SPLINE_REAL* x, /* in */ const ECO_SPLINE_REAL* y, /* in */ const ECO_SPLINE_REAL* s, /* in */ uint32_t n, /* out */ ECO_SPLINE_REAL* coefs, /* in */ CEcoSplineTrace* pTrace) {
     ECO_SPLINE_REAL h = 0;
     ECO_SPLINE_REAL delta = 0;
     ECO_SPLINE_REAL c1 = 0;
@@ -402,6 +425,9 @@ static void ECO_SPLINE_FN(EcoSplineBuildCoefs)(/* in */ const ECO_SPLINE_REAL* x
         coefs[4 * k + 1] = 2 * c1 - c2;
         coefs[4 * k + 2] = s[k];
         coefs[4 * k + 3] = y[k];
+        if (pTrace != 0) {
+            EcoSplineNotifyPiece(pTrace, k, coefs[4 * k], coefs[4 * k + 1], coefs[4 * k + 2], coefs[4 * k + 3]);
+        }
     }
 }
 
@@ -490,10 +516,12 @@ static void ECO_SPLINE_FN(EcoSplineEvaluate)(/* in */ const ECO_SPLINE_REAL* bre
  *   Возвращает ERR_ECO_SUCCESS, ERR_ECO_POINTER, ERR_ECO_OUTOFMEMORY или ERR_ECOADVANCEDMATH_*.
  * </description>
  */
-static int16_t ECO_SPLINE_FN(EcoSplineInterpolate)(/* in */ IEcoMemoryAllocator1* pIMem, /* in */ const ECO_SPLINE_REAL* x, /* in */ const ECO_SPLINE_REAL* y, /* in */ uint32_t n, /* in */ const ECO_SPLINE_ENDS_T* pEnds, /* in */ const ECO_SPLINE_REAL* xq, /* in */ uint32_t m, /* out */ ECO_SPLINE_REAL* yq) {
+static int16_t ECO_SPLINE_FN(EcoSplineInterpolate)(/* in */ IEcoMemoryAllocator1* pIMem, /* in */ const ECO_SPLINE_REAL* x, /* in */ const ECO_SPLINE_REAL* y, /* in */ uint32_t n, /* in */ const ECO_SPLINE_ENDS_T* pEnds, /* in */ const ECO_SPLINE_REAL* xq, /* in */ uint32_t m, /* out */ ECO_SPLINE_REAL* yq, /* in */ CEcoSplineEventSource* pSource) {
     ECO_SPLINE_REAL* pBlock = 0;
     ECO_SPLINE_REAL* s = 0;
     ECO_SPLINE_REAL* pWork = 0;
+    CEcoSplineTrace trace;
+    CEcoSplineTrace* pTrace = 0;
     int16_t result = ERR_ECO_SUCCESS;
 
     /* Проверка указателей (xq и yq не нужны, если точек вычисления нет) */
@@ -521,21 +549,30 @@ static int16_t ECO_SPLINE_FN(EcoSplineInterpolate)(/* in */ IEcoMemoryAllocator1
     if (n > (uint32_t)(0xFFFFFFFFUL / (5UL * sizeof(ECO_SPLINE_REAL)))) {
         return ERR_ECO_OUTOFMEMORY;
     }
+    result = EcoSplineBeginTrace(pSource, &trace);
+    if (result != ERR_ECO_SUCCESS) {
+        return result;
+    }
+    if (trace.pEnum != 0) {
+        pTrace = &trace;
+    }
     pBlock = (ECO_SPLINE_REAL*)pIMem->pVTbl->Alloc(pIMem, (uint32_t)(5UL * n * sizeof(ECO_SPLINE_REAL)));
     if (pBlock == 0) {
+        EcoSplineEndTrace(&trace);
         return ERR_ECO_OUTOFMEMORY;
     }
     s = pBlock;
     pWork = pBlock + n;
 
-    result = ECO_SPLINE_FN(EcoSplineSolveSlopes)(x, y, n, pEnds, s, pWork);
+    result = ECO_SPLINE_FN(EcoSplineSolveSlopes)(x, y, n, pEnds, s, pWork, pTrace);
     if (result == ERR_ECO_SUCCESS) {
         /* Диагонали прогонки больше не нужны: на их место записываются коэффициенты 4*(n-1) */
-        ECO_SPLINE_FN(EcoSplineBuildCoefs)(x, y, s, n, pWork);
+        ECO_SPLINE_FN(EcoSplineBuildCoefs)(x, y, s, n, pWork, pTrace);
         ECO_SPLINE_FN(EcoSplineEvaluate)(x, pWork, n, xq, m, yq);
     }
 
     pIMem->pVTbl->Free(pIMem, pBlock);
+    EcoSplineEndTrace(&trace);
     return result;
 }
 

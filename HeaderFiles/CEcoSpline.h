@@ -62,6 +62,8 @@ typedef struct CEcoSpline_4CAA1B2F {
  *   Вызывается из IEcoAdvancedMath::new_Spline.
  * </description>
  */
-int16_t createCEcoSpline_4CAA1B2F(/* in */ IEcoMemoryAllocator1* pIMem, /* in */ const double_t* x, /* in */ const double_t* y, /* in */ uint32_t n, /* in */ const ECO_SPLINE_ENDS_T* pEnds, /* out */ IEcoSpline** ppISpline);
+#include "CEcoSplineEvents.h"
+
+int16_t createCEcoSpline_4CAA1B2F(/* in */ IEcoMemoryAllocator1* pIMem, /* in */ const double_t* x, /* in */ const double_t* y, /* in */ uint32_t n, /* in */ const ECO_SPLINE_ENDS_T* pEnds, /* out */ IEcoSpline** ppISpline, /* in */ CEcoSplineEventSource* pSource);
 
 #endif /* __C_ECOSPLINE_H__ */

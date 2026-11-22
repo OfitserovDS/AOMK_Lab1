@@ -7,16 +7,18 @@
 - **Лабораторная работа 2** - включение и агрегирование: `Eco.AdvancedMath` поддерживает
   агрегирование и предоставляет интерфейсы калькулятора компонентов курса A-E; новый компонент
   `Eco.Lab2` (каталог `Eco.Lab2/`) агрегирует `Eco.AdvancedMath` и включает калькулятор E.
+- **Лабораторная работа 3** - пошаговые события построения кубического сплайна через
+  точки подключения `Eco.AdvancedMath`.
 
 ## Компоненты и интерфейсы
 
 | Компонент | CID | Интерфейсы |
 |---|---|---|
-| Eco.AdvancedMath | `{A2A2065C-8C3B-4926-BC6C-30A84CAA1B2F}` | `IEcoAdvancedMath` (сплайн: `spline` / `splinef` / `splinel`, `new_Spline`), объект `IEcoSpline` (pp-форма); `IEcoCalculatorX` - агрегирование B (без B - включение A или C); `IEcoCalculatorY` - включение D (без D - E, затем C) |
+| Eco.AdvancedMath | `{A2A2065C-8C3B-4926-BC6C-30A84CAA1B2F}` | `IEcoAdvancedMath` (сплайн: `spline` / `splinef` / `splinel`, `new_Spline`), объект `IEcoSpline` (pp-форма); `IEcoCalculatorX` - агрегирование B (без B - включение A или C); `IEcoCalculatorY` - включение D (без D - E, затем C); `IEcoConnectionPointContainer` - контейнер точки событий |
 | Eco.Lab2 | `{1EF402B8-755C-4289-BBE1-795A2F9385F6}` | `IEcoLab2` (`Calculate`, `SplineMean`); `IEcoAdvancedMath` - агрегирование Eco.AdvancedMath; `IEcoCalculatorX` / `IEcoCalculatorY` - включение E (внутри E агрегирован B) |
 | Eco.CalculatorA-E | см. `DependenciesFiles/README.md` | компоненты курса (001.InsideACOM), исходники без изменений |
 
-Через любой интерфейс компонента методом `QueryInterface` можно получить любой другой.
+`QueryInterface` возвращает поддерживаемые интерфейсы того же объекта.
 Коды ошибок: `SharedFiles/ErrEcoAdvancedMath.h` (1001-1006), `Eco.Lab2/SharedFiles/ErrEcoLab2.h` (2001-2003).
 
 ## Структура репозитория
@@ -24,7 +26,7 @@
 ```
 AssemblyFiles/Linux/gcc_v132/  Eco.AdvancedMath: Makefile (компонент), MakefileExe (тест), build.sh
 BuildFiles/                    готовая сборка Eco.AdvancedMath: .a/.so и юнит-тест
-DesignFiles/Report/            отчет по лабораторной работе 1, check_no_libc.sh
+DesignFiles/Report/            отчеты по лабораторным работам 1 и 3, check_no_libc.sh
 DesignFiles/Reference/         эталоны лабораторной работы 1 (SciPy, MATLAB)
 DesignFiles/Prompt/            системный промт v1.2 и протокол его проверки
 HeaderFiles/, SharedFiles/,    исходники Eco.AdvancedMath
@@ -44,16 +46,15 @@ Eco.Lab2/                      компонент лабораторной ра�
 в `BuildFiles/` и `Eco.Lab2/BuildFiles/`; пересобрать:
 
 ```bash
-AssemblyFiles/Linux/gcc_v132/build.sh            # лабораторная работа 1: компонент и тест, 4 конфигурации
-Eco.Lab2/AssemblyFiles/Linux/gcc_v132/build.sh   # лабораторная работа 2: калькуляторы A-E,
-                                                 # Eco.AdvancedMath, Eco.Lab2 и тест, 4 конфигурации
+bash AssemblyFiles/Linux/gcc_v132/build.sh          # ЛР 1 и 3: Eco.AdvancedMath и UnitTest
+bash Eco.Lab2/AssemblyFiles/Linux/gcc_v132/build.sh # ЛР 2: калькуляторы A-E, Eco.AdvancedMath, Eco.Lab2 и UnitTest
 ```
 
 ## Запуск юнит-тестов
 
 ```bash
-BuildFiles/Linux/x86_64/StaticRelease/EcoAdvancedMath     # лабораторная работа 1: 136 проверок
-Eco.Lab2/BuildFiles/Linux/x86_64/StaticRelease/EcoLab2    # лабораторная работа 2: 37 проверок
+BuildFiles/Linux/x86_64/StaticRelease/EcoAdvancedMath   # ЛР 1 и 3: 177 проверок
+Eco.Lab2/BuildFiles/Linux/x86_64/StaticRelease/EcoLab2   # ЛР 2: 37 проверок
 ```
 
 Тест печатает итог «Проверок: N, ... с ошибками: K» и возвращает 0 только при K = 0.
@@ -70,6 +71,19 @@ BuildFiles/Linux/x86_64/DynamicRelease/EcoAdvancedMath
 Eco.Lab2/BuildFiles/Linux/x86_64/DynamicRelease/EcoLab2
 ```
 
+## Лабораторная работа 3
+
+Интерфейс `IEcoAdvancedMathEvents` передает строки СЛАУ, прогоночные коэффициенты,
+наклоны узлов после обратной подстановки и коэффициенты кусков сплайна. Клиент получает
+`IEcoConnectionPointContainer` через `QueryInterface`, находит точку по IID событий
+и подписывает приемник через `Advise`.
+
+В блоке «Лабораторная 3» оба приемника подписываются на оба экземпляра `Eco.AdvancedMath`.
+Тест сверяет источник, порядок и значения событий, затем снимает одну подписку через
+`Unadvise` и проверяет три оставшиеся.
+
+[Отчет по лабораторной работе 3](DesignFiles/Report/EcoAdvancedMath_Lab3_Report.docx)
+
 ## Проверки
 
 ```bash
@@ -83,9 +97,8 @@ python3 DesignFiles/Reference/bench_scipy.py     # замеры SciPy
 
 ## Результаты
 
-- Сборка всех компонентов и тестов в 4 конфигурациях (Static|Dynamic x Release|Debug) - без
-  предупреждений; юнит-тесты: лабораторная работа 1 - 136/136, лабораторная работа 2 - 37/37
-  во всех конфигурациях.
+- Во всех четырех конфигурациях (Static и Dynamic, Release и Debug) тест Eco.AdvancedMath
+  прошел 177 из 177 проверок (136 для ЛР 1 и 41 для ЛР 3). Тест Eco.Lab2 прошел 37 из 37.
 - Лабораторная работа 1: совпадение с MATLAB/SciPy не хуже 4,44·10⁻¹⁵ (не менее 14 знаков после
   запятой); n = 10⁶ узлов - 60 мс (SciPy - 92 мс, MATLAB Online - 207 мс).
 - Лабораторная работа 2: задействованы все компоненты курса (A, C, D, E - включение, B -

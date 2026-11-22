@@ -30,6 +30,7 @@
 #include "IEcoInterfaceBus1MemExt.h"
 #include "CEcoAdvancedMath.h"
 #include "CEcoSpline.h"
+#include "CEcoSplineEvents.h"
 #include "IdEcoCalculatorA.h"
 #include "IdEcoCalculatorB.h"
 #include "IdEcoCalculatorD.h"
@@ -91,16 +92,23 @@ static int16_t ECOCALLMETHOD CEcoAdvancedMath_4CAA1B2F_NondelegatingQueryInterfa
     CEcoAdvancedMath_4CAA1B2F* pCMe = 0;
 
     /* Pointer Validation */
-    if (me == 0 || riid == 0 || ppv == 0) {
+    if (ppv == 0) {
+        return ERR_ECO_POINTER;
+    }
+    *ppv = 0;
+    if (me == 0 || riid == 0) {
         return ERR_ECO_POINTER;
     }
     pCMe = CEcoAdvancedMath_4CAA1B2F_FROM(me, m_pVTblINondelegatingUnk);
-    *ppv = 0;
 
     /* Validate and retrieve requested interface */
     if ( IsEqualUGUID(riid, &IID_IEcoAdvancedMath) ) {
         *ppv = &pCMe->m_pVTblIEcoAdvancedMath;
         pCMe->m_pVTblIEcoAdvancedMath->AddRef((IEcoAdvancedMath*)&pCMe->m_pVTblIEcoAdvancedMath);
+    }
+    else if ( IsEqualUGUID(riid, &IID_IEcoConnectionPointContainer) ) {
+        *ppv = &pCMe->m_ConnectionContainer;
+        pCMe->m_ConnectionContainer.pVTbl->AddRef(&pCMe->m_ConnectionContainer);
     }
     else if ( IsEqualUGUID(riid, &IID_IEcoCalculatorX) && pCMe->m_pIUnkInnerX != 0 ) {
         /* Агрегирование: интерфейс запрашивается у внутреннего компонента B */
@@ -193,7 +201,11 @@ static int16_t ECOCALLMETHOD CEcoAdvancedMath_4CAA1B2F_QueryInterface(/* in */ I
     CEcoAdvancedMath_4CAA1B2F* pCMe = (CEcoAdvancedMath_4CAA1B2F*)me;
 
     /* Pointer Validation */
-    if (me == 0 || riid == 0 || ppv == 0) {
+    if (ppv == 0) {
+        return ERR_ECO_POINTER;
+    }
+    *ppv = 0;
+    if (me == 0 || riid == 0) {
         return ERR_ECO_POINTER;
     }
 
@@ -265,7 +277,7 @@ static int16_t ECOCALLMETHOD CEcoAdvancedMath_4CAA1B2F_spline(/* in */ IEcoAdvan
         return ERR_ECO_POINTER;
     }
 
-    return EcoSplineInterpolate_d(pCMe->m_pIMem, x, y, n, pEnds, xq, m, yq);
+    return EcoSplineInterpolate_d(pCMe->m_pIMem, x, y, n, pEnds, xq, m, yq, pCMe);
 }
 
 /*
@@ -287,7 +299,7 @@ static int16_t ECOCALLMETHOD CEcoAdvancedMath_4CAA1B2F_splinef(/* in */ IEcoAdva
         return ERR_ECO_POINTER;
     }
 
-    return EcoSplineInterpolate_f(pCMe->m_pIMem, x, y, n, pEnds, xq, m, yq);
+    return EcoSplineInterpolate_f(pCMe->m_pIMem, x, y, n, pEnds, xq, m, yq, pCMe);
 }
 
 /*
@@ -309,7 +321,7 @@ static int16_t ECOCALLMETHOD CEcoAdvancedMath_4CAA1B2F_splinel(/* in */ IEcoAdva
         return ERR_ECO_POINTER;
     }
 
-    return EcoSplineInterpolate_l(pCMe->m_pIMem, x, y, n, pEnds, xq, m, yq);
+    return EcoSplineInterpolate_l(pCMe->m_pIMem, x, y, n, pEnds, xq, m, yq, pCMe);
 }
 
 /*
@@ -328,11 +340,15 @@ static int16_t ECOCALLMETHOD CEcoAdvancedMath_4CAA1B2F_new_Spline(/* in */ IEcoA
     CEcoAdvancedMath_4CAA1B2F* pCMe = (CEcoAdvancedMath_4CAA1B2F*)me;
 
     /* Pointer Validation */
-    if (me == 0 || ppISpline == 0) {
+    if (ppISpline == 0) {
+        return ERR_ECO_POINTER;
+    }
+    *ppISpline = 0;
+    if (me == 0) {
         return ERR_ECO_POINTER;
     }
 
-    return createCEcoSpline_4CAA1B2F(pCMe->m_pIMem, x, y, n, pEnds, ppISpline);
+    return createCEcoSpline_4CAA1B2F(pCMe->m_pIMem, x, y, n, pEnds, ppISpline, pCMe);
 }
 
 
@@ -687,6 +703,7 @@ static int16_t ECOCALLMETHOD initCEcoAdvancedMath_4CAA1B2F(/*in*/ CEcoAdvancedMa
 
     /* Getting the inner calculator components */
     if (result == ERR_ECO_SUCCESS) {
+        EcoSplineInitConnections(pCMe);
         CEcoAdvancedMath_4CAA1B2F_InitCalculators(pCMe, pIBus);
     }
 
@@ -745,6 +762,7 @@ static void ECOCALLMETHOD deleteCEcoAdvancedMath_4CAA1B2F(/* in */ CEcoAdvancedM
 
     if (pCMe != 0 ) {
         pIMem = pCMe->m_pIMem;
+        EcoSplineClearConnections(pCMe);
         /* Freeing the inner calculator components */
         if ( pCMe->m_pIY != 0 ) {
             pCMe->m_pIY->pVTbl->Release(pCMe->m_pIY);
@@ -819,5 +837,7 @@ CEcoAdvancedMath_4CAA1B2F g_xCEcoAdvancedMath_4CAA1B2F = {
     &g_xBD6414C29096423EA90C04D77AFD1CADVTbl_4CAA1B2F, /* m_pVTblIEcoCalculatorY */
     0, /* m_pIUnkInnerX */
     0, /* m_pIX */
-    0  /* m_pIY */
+    0, /* m_pIY */
+    {0}, /* m_ConnectionContainer */
+    {{0}, 0, 0, 0, 0, 0} /* m_ConnectionPoint */
 };

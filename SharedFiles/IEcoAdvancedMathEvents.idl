@@ -1,0 +1,21 @@
+﻿/*
+ * Исходящий интерфейс событий построения кубического сплайна.
+ * Copyright (c) 2026 Офицеров Д.С. All rights reserved.
+ */
+
+import "EcoAdvancedMath.idl";
+
+[
+    object,
+    uuid(2AB6DF5D-1F33-4D79-AB1A-C5AA48630538),
+    pointer_default(unique)
+]
+interface IEcoAdvancedMathEvents : IEcoUnknown {
+    int16_t OnSystemRow([in] IEcoAdvancedMath* pSource, [in] uint32_t row,
+        [in] ldouble_t lower, [in] ldouble_t diagonal, [in] ldouble_t upper, [in] ldouble_t rhs);
+    int16_t OnForwardStep([in] IEcoAdvancedMath* pSource, [in] uint32_t row,
+        [in] ldouble_t alpha, [in] ldouble_t beta);
+    int16_t OnSlopeReady([in] IEcoAdvancedMath* pSource, [in] uint32_t node, [in] ldouble_t slope);
+    int16_t OnPieceReady([in] IEcoAdvancedMath* pSource, [in] uint32_t piece,
+        [in] ldouble_t a, [in] ldouble_t b, [in] ldouble_t c, [in] ldouble_t d);
+};

@@ -126,7 +126,11 @@ LIBS = -lgcc
 # --- Source and Object Files ---
 SRC = ..$(SLASH)..$(SLASH)..$(SLASH)SourceFiles$(SLASH)CEcoAdvancedMath.c \
       ..$(SLASH)..$(SLASH)..$(SLASH)SourceFiles$(SLASH)CEcoAdvancedMathFactory.c \
-      ..$(SLASH)..$(SLASH)..$(SLASH)SourceFiles$(SLASH)CEcoSpline.c
+      ..$(SLASH)..$(SLASH)..$(SLASH)SourceFiles$(SLASH)CEcoSpline.c \
+      ..$(SLASH)..$(SLASH)..$(SLASH)SourceFiles$(SLASH)CEcoSplineEvents.c \
+      ..$(SLASH)..$(SLASH)..$(SLASH)SourceFiles$(SLASH)CEcoSplineConnectionPoint.c \
+      ..$(SLASH)..$(SLASH)..$(SLASH)SourceFiles$(SLASH)CEcoSplineEnumConnectionPoints.c \
+      ..$(SLASH)..$(SLASH)..$(SLASH)SourceFiles$(SLASH)CEcoSplineEnumConnections.c
 
 OBJ = $(SRC:.c=.o)
 
